@@ -1,1 +1,158 @@
-Under construction ...
+<!-- Licensed under a BSD license. See license.html for license -->
+<!DOCTYPE html>
+<html>
+    <head>
+    <meta charset="utf-8" />
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0, user-scalable=yes"
+    />
+    <title>Three.js - Template: cube with floor</title>
+    <style>
+        html,
+        body {
+        width: 50%;
+        height: 50%;
+        margin: 0;
+        }
+
+        #c {
+        width: 50%;
+        height: 50%;
+        display: block;
+        }
+    </style>
+    </head>
+    <body>
+    <script async src="https://unpkg.com/es-module-shims@1.3.6/dist/es-module-shims.js"></script>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.172.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.172.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        let scene = new THREE.Scene();
+        
+        let renderer = new THREE.WebGLRenderer();
+        console.log(renderer.context);
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+        let canvas = renderer.domElement;
+
+        let aspect = window.innerWidth / window.innerHeight;
+        let camera = new THREE.PerspectiveCamera(75, aspect, 0.1, 100);
+        scene.add(camera);
+
+        function resizeRendererToDisplaySize(renderer)
+        {
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            
+            aspect = window.innerWidth / window.innerHeight;
+            camera.aspect = aspect;
+            camera.updateProjectionMatrix();
+        };
+
+
+        { //Lights
+            const color = 0xFFFFFF;
+            const intensity = 3;
+            const light = new THREE.DirectionalLight( color, intensity );
+            light.position.set( - 1, 2, 4 );
+            scene.add( light );
+
+            const ambient = new THREE.AmbientLight( 0x808080 ); // soft white light
+            scene.add( ambient );
+        }
+
+        { //Floor
+            let FLOOR_LVL = -1;
+
+            let cross_shader_material = new THREE.ShaderMaterial( {
+            uniforms: {
+                target_pos: { value: new THREE.Vector3(0,0,0) },
+                maxdistance: {value: 19.0}
+            },
+            transparent : true,
+            vertexShader: `
+                uniform vec3 target_pos;
+                uniform float maxdistance;
+                out vec4 finalcolor;
+                void main() {
+                    vec4 world_pos = modelMatrix * vec4(position, 1.0);
+                    float opacity = 1.0 - distance(world_pos.xyz, target_pos)/maxdistance;
+                    finalcolor = vec4(1.0, 1.0, 1.0, opacity);
+                    gl_Position = projectionMatrix * viewMatrix * world_pos;
+                }
+            `,
+            fragmentShader: `
+                in vec4 finalcolor;
+                void main() {
+                    gl_FragColor = finalcolor;
+                }
+            `
+            } );
+
+            let cross_vertices = new Float32Array([
+                -0.25, 0, 0,
+                0.25, 0, 0,
+                0, 0, -0.25,
+                0, 0, .25
+            ]);
+
+            let cross_geom = new THREE.BufferGeometry();
+            cross_geom.setAttribute('position', new THREE.BufferAttribute(cross_vertices, 3));
+            let cross_obj = new THREE.LineSegments(cross_geom, cross_shader_material);
+            //scene.add(cross_obj); //To test how 1 is seen
+
+            let nx = 80, nz = 80;
+            let testminishpere = new THREE.SphereGeometry( .2, 6, 6 )
+            //let floor = new THREE.InstancedMesh(cross_geom, cross_shader_material, nx*nz);
+            let floor = new THREE.Group();
+
+            for (let i = 0; i < nx; ++i)
+            {
+                for (let j = 0; j < nz; ++j)
+                {
+                    let id = i*nx + j
+                    // let matpos = new THREE.Matrix4();
+                    // matpos.setPosition(i - nx/2,  0, j - nx/2);
+                    //floor.setMatrixAt(id, matpos);
+                    let newcross = new THREE.LineSegments(cross_geom, cross_shader_material);
+                    newcross.position.set(i - nx/2,  0, j - nx/2);
+                    floor.add(newcross);
+                }
+            }
+            floor.scale.set(.5, .5, .5);
+            floor.translateY(FLOOR_LVL);
+            scene.add(floor);
+        }
+
+        
+        let geometry = new THREE.BoxGeometry(1, 1, 1);
+        let material = new THREE.MeshPhongMaterial( { color : 0x880000} );
+        let cube = new THREE.Mesh(geometry, material);
+        scene.add(cube);
+        camera.position.z = 5;
+
+        let controlsOrbit = new OrbitControls(camera, canvas);
+        controlsOrbit.target.set(0, 0, 0);
+        controlsOrbit.update();
+
+        function render () {
+            requestAnimationFrame(render);
+            controlsOrbit.update();
+
+            renderer.render(scene, camera);
+        };
+
+        render();
+    </script>
+    </body>
+</html>
