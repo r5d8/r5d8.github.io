@@ -1,0 +1,1058 @@
+<!-- Licensed under a BSD license. See license.html for license -->
+<!DOCTYPE html>
+<html>
+    <head>
+    <meta charset="utf-8" />
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0, user-scalable=yes"
+    />
+    <title>Three.js - Robot arms</title>
+    <style>
+        html,
+        body {
+        width: 50%;
+        height: 50%;
+        margin: 0;
+        }
+
+        #c {
+        width: 50%;
+        height: 50%;
+        display: block;
+        }
+    </style>
+    </head>
+    <body>
+    <script async src="https://unpkg.com/es-module-shims@1.3.6/dist/es-module-shims.js"></script>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.172.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.172.0/examples/jsm/"
+            }
+        }
+    </script>
+    <script type="module">
+        import * as THREE from 'three';
+        class CustomMatrix2D
+        {
+            constructor()
+            {
+                this._n = 0;
+                this._m = 0;
+                this.matrix = null;
+            }
+
+            static fromMatrix(matrix)
+            {
+                let CM = new CustomMatrix2D();
+                CM.set(matrix);
+                return CM;
+            }
+
+            static fromSize(n, m)
+            {
+                let CM = new CustomMatrix2D();
+                CM._n = n;
+                CM._m = m;
+                CM.matrix = Array.from({ length: m }, () => Array(n).fill(0));
+                return CM;
+            }
+            
+            set(matrix_new)
+            {
+                this.matrix = matrix_new;
+                this._m = this.matrix[0].length;
+                this._n = this.matrix.length;
+            }
+
+            transposeMatrix() {
+                if (!this.matrix) throw new Error("Matrix not existing");
+                let trasposed_matrix = this.matrix[0].map((_, colIndex) => this.matrix.map(row => row[colIndex]));
+                return CustomMatrix2D.fromMatrix(trasposed_matrix);
+            }
+
+            invertMatrix() {
+                if (!this.matrix) throw new Error("Matrix not existing");
+
+                let matrix = this.matrix;
+                if (this._n != this._m) return null;
+                
+                let n = this._n;
+                let identity = matrix.map((row, i) => row.map((_, j) => (i === j ? 1 : 0)));
+                let augmented = matrix.map((row, i) => [...row, ...identity[i]]);
+
+                // Forward elimination
+                for (let i = 0; i < n; i++) {
+                    let maxRow = i;
+                    for (let k = i + 1; k < n; k++) {
+                        if (Math.abs(augmented[k][i]) > Math.abs(augmented[maxRow][i])) {
+                            maxRow = k;
+                        }
+                    }
+                    [augmented[i], augmented[maxRow]] = [augmented[maxRow], augmented[i]];
+
+                    let pivot = augmented[i][i];
+                    if (pivot === 0) return null; // Singular matrix (not invertible)
+
+                    for (let j = 0; j < 2 * n; j++) {
+                        augmented[i][j] /= pivot;
+                    }
+
+                    for (let k = 0; k < n; k++) {
+                        if (k !== i) {
+                            let factor = augmented[k][i];
+                            for (let j = 0; j < 2 * n; j++) {
+                                augmented[k][j] -= factor * augmented[i][j];
+                            }
+                        }
+                    }
+                }
+                
+                // Extract inverse matrix (right half of augmented matrix)
+                return CustomMatrix2D.fromMatrix(augmented.map(row => row.slice(n)));
+            }
+
+            makeIdentity()
+            {
+                let matrix = Array.from({ length: this._m }, () => Array(this._n).fill(0));
+                for (let i = 0; i < Math.min( this._m,  this._n); ++i) matrix[i][i] = 1;
+                return CustomMatrix2D.fromMatrix(matrix);
+            }
+
+            multiplyByScalar(scalar)
+            {
+                if (!this.matrix) throw new Error("Matrix not existing");
+                let multscal = this.matrix.map(row => row.map(value => value * scalar));
+                return CustomMatrix2D.fromMatrix(multscal);
+            }
+
+            static multiply(CM2D_A, CM2D_B) {
+                let A = CM2D_A.matrix;
+                let B = CM2D_B.matrix;
+                let rowsA = A.length, colsA = A[0].length;
+                let rowsB = B.length, colsB = B[0].length;
+
+                if (colsA !== rowsB) {
+                    console.log("A", rowsA, colsA, "B",rowsB, colsB)
+                    throw new Error("Matrix dimensions do not match for multiplication");
+                }
+
+                //console.log("New size:", rowsA, colsB);
+
+                let result = Array.from({ length: rowsA }, () => Array(colsB).fill(0));
+                //console.log(result.length, result[0].length);
+
+                for (let i = 0; i < rowsA; i++) {
+                    for (let j = 0; j < colsB; j++) {
+                        for (let k = 0; k < colsA; k++) {
+                            result[i][j] += A[i][k] * B[k][j];
+                        }
+                    }
+                }
+
+                return CustomMatrix2D.fromMatrix(result);
+            }
+
+            static sum(CM2D_A, CM2D_B) {
+                let A = CM2D_A.matrix;
+                let B = CM2D_B.matrix;
+                let rowsA = A.length, colsA = A[0].length;
+                let rowsB = B.length, colsB = B[0].length;
+
+                if (rowsA !== rowsB && colsA != colsB) {
+                    console.log("A", rowsA, colsA, "B",rowsB, colsB)
+                    throw new Error("Matrix dimensions do not match for multiplication");
+                }
+
+                //console.log("New size:", rowsA, colsB);
+
+                let result = Array.from({ length: rowsA }, () => Array(rowsB).fill(0));
+                //console.log(result.length, result[0].length);
+
+                for (let i = 0; i < rowsA; i++) {
+                    for (let j = 0; j < colsB; j++) {
+                        result[i][j] += A[i][j] + B[i][j];
+                    }
+                }
+
+                return CustomMatrix2D.fromMatrix(result);
+            }
+
+            pseudoinverse()
+            {
+                if (!this.matrix) throw new Error("Matrix not existing");
+                let Mt = this.transposeMatrix();
+                let _MtM_i = CustomMatrix2D.multiply(Mt, this).invertMatrix();
+                let MPI = CustomMatrix2D.multiply(_MtM_i, Mt);
+                return MPI;
+            }
+
+            print() {
+                console.log(this.matrix);
+            }
+        }
+        
+        function clamp(value, min, max) 
+        {
+            return Math.min(Math.max(value, min), max);
+        }
+
+        class IKSolver 
+        {
+            constructor(trunk_obj, target_obj, end_effector_obj, joint_table)
+            {
+                this.trunk_obj = trunk_obj;
+                this.target_obj = target_obj;
+                this.end_effector_obj = end_effector_obj;
+                this.joint_table = joint_table;
+                this.thetas = new Array({length : joint_table.length}).fill(0);
+                //Table elements:
+                //joint_obj, rotation_axis (marked by Vec3), predecessor_id
+                
+                //this.joint_matrices = new Array(len(joint_table)); //An array containing the corresponding transformation matrices, maybe w/o the quat. No, I'll have to get them from the table each time.
+                //this.thetas = new Array(len(joint_table)).fill(0.087); //Fill with 5 degrees, so it doesn't start at a singularity
+            }
+
+            calculate_FK_theta_change(theta_id, delta_angle = 0.1)
+            {
+                //Matrix sequence: (given A1 == A2)
+                /*
+                Tunk * OriginalDisplA0 * dAxis0 * OriginalRotA0 * OriginalDisplA1A2 * dAxis1 * dAxis2 * OriginalRotA1A2 * endEffector
+                */
+                
+                //Start from the last transformation
+                let transformation = new THREE.Matrix4(); //new THREE.Vector4(0,0,0,0);
+                transformation.premultiply(this.end_effector_obj.matrix);
+
+                for(let i = this.joint_table.length - 1; i >= 0; i--)
+                {
+                    //console.log(this.joint_table);
+                    let curr_joint = this.joint_table[i][0];                 
+                    let is_same_joint_after = i < this.joint_table.length - 1 && curr_joint == this.joint_table[i+1][0];
+                    let is_same_joint_before = i > 0 && curr_joint == this.joint_table[i-1][0];
+
+                    if (!is_same_joint_before)
+                    {
+                        let jointinitialrot = new THREE.Matrix4();
+                        jointinitialrot.makeRotationFromQuaternion(curr_joint.quaternion);
+                        transformation.premultiply(jointinitialrot);
+                    }
+
+                    //Add delta rotation
+                    if (i == theta_id)
+                    {
+                        let quat_angle = new THREE.Quaternion();
+                        quat_angle.setFromAxisAngle(this.joint_table[i][1], delta_angle);//Math.PI / 4);
+                        let jointdeltarot = new THREE.Matrix4();
+                        jointdeltarot.makeRotationFromQuaternion(quat_angle);
+                        transformation.premultiply(jointdeltarot);
+                    }
+
+                    if (!is_same_joint_before)
+                    {
+                        let jointinitialtr = new THREE.Matrix4();
+                        jointinitialtr.makeTranslation(curr_joint.position);
+                        transformation.premultiply(jointinitialtr);
+                    }                    
+                    
+                }
+             
+                if(this.joint_table[0][0].parent)
+                {
+                    transformation.premultiply(this.joint_table[0][0].parent.matrixWorld);
+                }
+                
+                return transformation;
+            }
+
+            calculate_jacobian_theta(theta_id, delta_angle, curr_ef_pos, curr_ef_quat)
+            {
+                /*
+                Recall that the Jacobian determines the difference on the end effector after applying a small change on a joint
+                For this, I will first calculate the Forward Kinematics of the end effector with the small change.
+                Then I will compare the position (and maybe also rotation, TBD), and return a vector corresponding
+                to the difference in position divided by the difference in angle.
+                */
+
+                let delta_ef = this.calculate_FK_theta_change(theta_id, delta_angle);
+                let epos = new THREE.Vector3();
+                let erot = new THREE.Quaternion();
+                let escale = new THREE.Vector3();
+                delta_ef.decompose(epos, erot, escale);
+
+                let dpos = new THREE.Vector3().subVectors(epos, curr_ef_pos);
+                //console.log(dpos);
+                let drot = curr_ef_quat.angleTo(erot);
+                let jacobian_theta = [
+                    [dpos.x/delta_angle],
+                    [dpos.y/delta_angle],
+                    [dpos.z/delta_angle],
+                    //[drot/delta_angle]
+                ]; 
+
+                return jacobian_theta;
+            }
+
+            calculate_jacobian_matrix(ef_woldpos, ef_worldquat)
+            {
+                /*
+                TODO: Add rotation to the target. For that, calculate the quaternion of the current, the quat of the calculated one, compute the .angleTo(Quat2) and get the angle value. This will be the 4th element of the matrix.
+                */
+                let delta_angle = 0.001;
+
+                let jacobian_mat = Array.from({ length: 3 }, () => Array(this.joint_table.length).fill(0));
+
+                for(let i = 0; i < this.joint_table.length; i++)
+                {
+                    let jmi = this.calculate_jacobian_theta(i, delta_angle, ef_woldpos, ef_worldquat);
+                    for(let j = 0; j < jmi.length; j++)
+                    {
+                        jacobian_mat[j][i] = jmi[j][0];
+                    }
+                }
+
+                //console.log(jacobian_mat);
+                let JM = CustomMatrix2D.fromMatrix(jacobian_mat);
+                //JM.print();
+                return JM;
+            }
+
+            update_necessary_matrices()
+            {
+                this.target_obj.updateMatrixWorld();
+                if(this.joint_table[0][0].parent) this.joint_table[0][0].parent.updateMatrixWorld();
+                for (let i = 0; i < this.joint_table.length; i++)
+                {
+                    this.joint_table[i][0].updateMatrixWorld();
+                }
+            }
+
+            rotate_joint(jid, theta)
+            {
+                /*
+                I have to multiply the current joint matrix by:
+                position * Rotation(theta) * (position^-1)
+                */
+                let curr_joint = this.joint_table[jid][0];
+                let curr_axis = this.joint_table[jid][1];
+                let curr_rot = curr_joint.rotation;
+                //console.log(curr_rot);
+
+                let minirot = new THREE.Matrix4();
+
+                //UNDO POSITION
+                let resettr = new THREE.Matrix4();
+                resettr.makeTranslation(curr_joint.position.clone().negate());
+                minirot.premultiply(resettr);
+
+                //UNDO ROTATION
+                let quat_angle_rev = curr_joint.quaternion.clone(); //new THREE.Quaternion();
+                //quat_angle_rev.setFromEuler(curr_rot);                
+                let jointrrev = new THREE.Matrix4();
+                jointrrev.makeRotationFromQuaternion(quat_angle_rev);
+                minirot.premultiply(jointrrev.invert());
+
+                //DO DELTA ROTATION
+                let quat_angle = new THREE.Quaternion();
+                quat_angle.setFromAxisAngle(curr_axis, theta);                
+                let jointdeltarot = new THREE.Matrix4();
+                jointdeltarot.makeRotationFromQuaternion(quat_angle);
+                minirot.premultiply(jointdeltarot);
+
+                //DO ROTATION
+                minirot.premultiply(jointrrev.invert());
+
+                //DO POSITION
+                let movebacktr = new THREE.Matrix4();
+                movebacktr.makeTranslation(curr_joint.position.clone());
+                minirot.premultiply(movebacktr);
+                
+                curr_joint.applyMatrix4(minirot);
+                curr_joint.updateMatrixWorld();
+            }
+
+            get_necessary_rotations_MPI(J, e, angle)
+            {
+                //Calculate the pseudoinverse
+                let MPI = J.pseudoinverse();
+                
+                //Calculate new thetas
+                let eV = [[e.x], [e.y], [e.z]]; //, [angle]];
+                let CM_eV = CustomMatrix2D.fromMatrix(eV);
+                let thetas = CustomMatrix2D.multiply(MPI, CM_eV);
+                //thetas.print();
+                return thetas;
+            }
+
+            get_necessary_rotations_T(J, e, angle, alfa = 0.1)
+            {
+                //Calculate the pseudoinverse
+                let JT = J.transposeMatrix();
+
+                //Calculate new thetas
+                let eV = [[e.x], [e.y], [e.z]];//, [angle]];
+                let CM_eV = CustomMatrix2D.fromMatrix(eV);
+                //JT.print();
+                //CM_eV.print();
+                //console.log("---------------")
+                let thetas = CustomMatrix2D.multiply(JT, CM_eV);
+                //thetas.print();
+                return thetas.multiplyByScalar(alfa);
+            }
+
+            get_necessary_rotations_DLS(J, e, angle, lambda = 3)
+            {
+                //Calculate the pseudoinverse
+                let JT = J.transposeMatrix();
+
+                let JJT = CustomMatrix2D.multiply(J, JT);
+                let I = JJT.makeIdentity();
+                let damping = I.multiplyByScalar(lambda * lambda);
+                let sumJsI = CustomMatrix2D.sum(JJT, damping).invertMatrix();
+                let DLS = CustomMatrix2D.multiply(JT, sumJsI);
+
+                //Calculate new thetas
+                let eV = [[e.x], [e.y], [e.z]];//, [angle]];
+                //console.log(e);
+                let CM_eV = CustomMatrix2D.fromMatrix(eV);
+                //JT.print();
+                //CM_eV.print();
+                //console.log("---------------")
+                let thetas = CustomMatrix2D.multiply(DLS, CM_eV);
+                //thetas.print();
+                return thetas;
+            }
+
+            update()
+            {
+                this.update_necessary_matrices()
+
+                //Calculate the Jacobian Matrix
+                let tar_worldpos = new THREE.Vector3();
+                this.target_obj.getWorldPosition(tar_worldpos);
+                let tar_quat = new THREE.Quaternion();
+                this.target_obj.getWorldQuaternion(tar_quat);
+
+                let ef_worldpos = new THREE.Vector3();
+                this.end_effector_obj.getWorldPosition(ef_worldpos);
+                let ef_quat = new THREE.Quaternion();
+                this.end_effector_obj.getWorldQuaternion(ef_quat);
+
+                let J = this.calculate_jacobian_matrix(ef_worldpos, ef_quat);
+                
+                //Calculate new thetas
+                let e = new THREE.Vector3().subVectors(tar_worldpos, ef_worldpos);
+
+                let thetas = this.get_necessary_rotations_DLS(J, e, ef_quat.angleTo(tar_quat));
+                //thetas.print();
+
+                //Update parts
+                for (let i = 0; i < this.joint_table.length; i++)
+                {
+                    this.rotate_joint(i, thetas.matrix[i][0]);
+                }
+            }
+
+            test_FK()
+            {
+                this.update_necessary_matrices()
+                
+                let transf = this.calculate_FK_theta_change(-1, 0);
+                
+                transf.multiply(this.target_obj.matrix.invert());
+                this.target_obj.applyMatrix4(transf);
+                this.target_obj.updateMatrixWorld();
+            }
+            
+        }
+        window.IKSolver = IKSolver;
+        window.CustomMatrix2D = CustomMatrix2D;
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { GUI } from 'three/addons/libs/lil-gui.module.min.js';
+        import {VRButton} from 'three/addons/webxr/VRButton.js';
+
+        let SHOW_AXIS = false;
+
+        let scene = new THREE.Scene();
+        scene.background = new THREE.Color( 0x222222 );
+
+        let renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+        let canvas = renderer.domElement;
+        renderer.xr.enabled = true;
+        document.body.appendChild(VRButton.createButton(renderer));
+
+        let aspect = window.innerWidth / window.innerHeight;
+        let camera = new THREE.PerspectiveCamera(75, aspect, 0.1, 100);
+        camera.position.set(0, -0.2, 5);
+        scene.add(camera);
+
+        function resizeRendererToDisplaySize(renderer)
+        {
+            if (canvas.width !== window.innerWidth || canvas.height !== window.innerWidth)
+            {
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                
+                aspect = window.innerWidth / window.innerHeight;
+                camera.aspect = aspect;
+                camera.updateProjectionMatrix();
+            }
+        };
+
+        function create_empty_group(axis_size = 0.1)
+        {
+            let group = new THREE.Group();
+            
+            let axesHelper = new THREE.AxesHelper( axis_size );
+            axesHelper.visible = SHOW_AXIS;
+            group.add( axesHelper );
+            
+            return group;
+        }
+
+        { //Lights
+            let color = 0xFFFFFF;
+            let intensity = 3;
+            let light = new THREE.DirectionalLight( color, intensity );
+            light.position.set( - 1, 2, 4 );
+            scene.add( light );
+
+            let ambient = new THREE.AmbientLight( 0x808080 ); // soft white light
+            scene.add( ambient );
+        }
+
+        { //Floor
+            let FLOOR_LVL = -1;
+
+            var startTime;
+            var textureForShader;
+            var textureLoader = new THREE.TextureLoader();
+            
+            textureLoader.load("./resources/images/GroundCross.png", function (texture) {
+                textureForShader = texture;
+                texture.wrapS = THREE.RepeatWrapping;
+                texture.wrapT = THREE.RepeatWrapping;
+                texture.repeat.set(40, 40);
+                init_floor();
+            });
+
+            function init_floor()
+            {
+                let cross_shader_material = new THREE.ShaderMaterial( {
+                uniforms: {
+                    target_pos: { value: new THREE.Vector3(0,0,0) },
+                    maxdistance: {value: 19.0},
+                    tex: { type: "t", value: textureForShader },
+                },
+                transparent : true,
+                vertexShader: `
+                    out vec4 world_pos;
+                    varying vec2 vUv;
+                    void main() {
+                        vUv = uv;
+                        world_pos = modelMatrix * vec4(position, 1.0);
+                        gl_Position = projectionMatrix * viewMatrix * world_pos;
+                    }
+                `,
+                fragmentShader: `
+                    uniform vec3 target_pos;
+                    uniform float maxdistance;
+                    varying vec2 vUv;
+                    in vec4 world_pos;
+                    uniform sampler2D tex;
+                    void main() {
+                        vec3 texColor = texture2D ( tex, vUv ).rgb;
+                        if (length(texColor) < 0.5) discard;
+                        float opacity = 1.0 - distance(world_pos.xyz, target_pos)/maxdistance;
+                        //if (opacity < 0.01) discard;
+                        gl_FragColor = vec4(texColor, opacity);
+                    }
+                `,
+                side: THREE.DoubleSide
+                } );
+
+                let G_floor = new THREE.PlaneGeometry(40, 40, 1, 1);
+                let cross_rep = 30;
+                let uvAttribute = G_floor.getAttribute('uv');
+                uvAttribute.setXY(0, 0, 0);
+                uvAttribute.setXY(1, cross_rep, 0);
+                uvAttribute.setXY(2, 0, cross_rep);
+                uvAttribute.setXY(3, cross_rep, cross_rep); 
+
+                uvAttribute.needsUpdate = true;
+
+                let floor = new THREE.Mesh(G_floor, cross_shader_material);
+                
+                floor.rotation.x = -Math.PI/2;
+                floor.translateZ(FLOOR_LVL);
+                scene.add(floor);
+            }
+        }
+
+        let MAT_gray_phong = new THREE.MeshPhongMaterial( { color : 0x555555} );
+        let MAT_black_phong = new THREE.MeshPhongMaterial( { color : 0x000000, side: THREE.DoubleSide} );
+        let MAT_blue_phong = new THREE.MeshPhongMaterial({color : 0x00a2e8});
+
+        let TEX_robot =  new THREE.TextureLoader().load("./resources/images/RobotArmTexture.png");
+        //let MAT_robot_arm = new THREE.MeshPhongMaterial({map : TEX_robot});
+
+        let MAT_feaure = new THREE.ShaderMaterial( {
+        uniforms: {
+            tex: { type: "t", value: TEX_robot },
+        },
+        transparent : true,
+        vertexShader: `
+            varying vec2 vUv;
+            void main() {
+                vUv = uv;
+                gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(position, 1.0);
+            }
+        `,
+        fragmentShader: `
+            varying vec2 vUv;
+            uniform sampler2D tex;
+            void main() {
+                vec3 texColor = texture2D ( tex, vUv ).rgb;
+                if (length(texColor) < 0.1) discard;
+                gl_FragColor = vec4(texColor, 1.0);
+            }
+        `,
+        side: THREE.DoubleSide
+        } );
+
+        let OBJ_robot = create_empty_group(1);
+        
+        //#region robot additional feature
+        let G_blue_addon = new THREE.PlaneGeometry(1, 1);
+        let M_blue_addon = new THREE.Mesh(G_blue_addon, MAT_feaure);
+        M_blue_addon.name = "Blue_addon";
+        //#endregion
+
+        //#region robot chasis
+        
+        let G_Chasis = new THREE.OctahedronGeometry( 1 );
+        let M_robot_chasis = new THREE.Mesh(G_Chasis, MAT_black_phong);
+        M_robot_chasis.rotation.y += Math.PI/4;
+
+        OBJ_robot.add(M_robot_chasis);
+        
+        let M_chasis_mid_addon = M_blue_addon.clone();
+        OBJ_robot.add(M_chasis_mid_addon);
+        M_chasis_mid_addon.position.y = .41;//.45;
+        M_chasis_mid_addon.position.z = .42;//.4;
+        M_chasis_mid_addon.rotation.x = -35 * Math.PI/180;
+        //#endregion
+
+        //#region creation of arm segment
+        
+        let OBJ_arm_segment = create_empty_group(.5);
+        
+        let G_arm_face = new THREE.Shape([
+            [0, 0], [.01, 0], [.01,.05], [0, .05]
+        ].map(p => new THREE.Vector2(...p)));
+
+        let extrudeSettings = {
+            steps: 5,
+            depth: 1, 
+            bevelEnabled: true,  
+            bevelThickness: 0.15,
+            bevelSize: 0.2,
+            bevelSegments: 8,  
+        };
+        let G_arm_trunk = new THREE.ExtrudeGeometry(G_arm_face, extrudeSettings);
+        let M_arm_trunk = new THREE.Mesh(G_arm_trunk, MAT_black_phong);
+        OBJ_arm_segment.add(M_arm_trunk);
+        OBJ_arm_segment.matrixAutoUpdate = true;
+
+        let OBJ_revolutjoint = create_empty_group(.5);
+        OBJ_revolutjoint.name = "revolut_joint";
+        OBJ_arm_segment.add(OBJ_revolutjoint);
+        OBJ_revolutjoint.position.z = 1;
+
+        let G_Cyl_rev_jnt = new THREE.CylinderGeometry(
+            .2, .2, .44, 16);
+        let M_Cyl_rev_jnt = new THREE.Mesh(G_Cyl_rev_jnt, MAT_blue_phong);
+        M_Cyl_rev_jnt.position.y = 0.025;
+        OBJ_revolutjoint.add(M_Cyl_rev_jnt);
+
+        let OBJ_endpoint = create_empty_group(.5);
+        OBJ_endpoint.name = "attach_point";
+        OBJ_revolutjoint.add(OBJ_endpoint);
+        OBJ_endpoint.position.z = 0.3;
+
+        let M_arm_addon = M_blue_addon.clone();
+        OBJ_arm_segment.add(M_arm_addon);
+        M_arm_addon.position.y = .252;//.45;
+        M_arm_addon.position.z = .6;//.4;
+        M_arm_addon.rotation.x = -90 * Math.PI/180;
+        M_arm_addon.rotation.z = 0 * Math.PI/180;
+        M_arm_addon.scale.x = .5;
+        M_arm_addon.scale.y = .75;
+
+        let M_arm_addon_2 = M_arm_addon.clone();
+        OBJ_arm_segment.add(M_arm_addon_2);
+        M_arm_addon_2.position.y = -0.202;
+
+        //scene.add(OBJ_arm_segment);
+        /*
+        Structure of the arm:
+        OBJ_arm_segment
+        --- axis helper
+        --- mesh
+        --- decal
+        --- rev_joint
+            --- axis
+            --- joint mesh
+            --- attach_point
+                ---- axis
+        */
+        //#endregion
+
+        //#region CreatePlier
+        class CustomCurve extends THREE.Curve {
+            constructor( scale ) {
+                super();
+                this.scale = scale;
+            }
+            getPoint( t ) {
+                let tx = t * 3 - 1.5;
+                let ty = (tx * tx * tx - tx*tx)/ 4 - 1;//Math.sin( 2 * Math.PI * t );
+                let tz = 0;
+                return new THREE.Vector3( tz, ty, tx ).multiplyScalar( this.scale );
+            }
+        }
+
+        let G_plierpart = new THREE.TubeGeometry(new CustomCurve(.5), 12, .09, 8, false);
+        let M_plierpart = new THREE.Mesh(G_plierpart, MAT_black_phong);
+        let OBJ_plierpart = create_empty_group(.1);
+        OBJ_plierpart.add(M_plierpart);
+        M_plierpart.position.z += 1.15;
+        M_plierpart.position.y += 0.8;
+        M_plierpart.rotation.x = 25 * Math.PI / 180.0;
+        M_plierpart.scale.z
+        //scene.add(OBJ_plierpart);
+        
+        let OBJ_Plier = create_empty_group(.5);
+        let OBJ_LPlierArm = OBJ_plierpart.clone();
+        OBJ_LPlierArm.name = "PlierPartL";
+        let OBJ_RPlierArm = OBJ_plierpart.clone();
+        OBJ_RPlierArm.rotation.z = Math.PI;
+        OBJ_RPlierArm.name = "PlierPartR";
+        OBJ_Plier.add(OBJ_LPlierArm);
+        OBJ_Plier.add(OBJ_RPlierArm);
+
+        let pldepthscale = 0.6;
+        OBJ_LPlierArm.scale.z = pldepthscale;
+        OBJ_RPlierArm.scale.z = pldepthscale;
+        
+        // let tempR = 10;
+        // OBJ_LPlierArm.rotation.x = - tempR * Math.PI / 180
+        // OBJ_RPlierArm.rotation.x = tempR * Math.PI / 180
+
+        let G_PlierBase = new THREE.IcosahedronGeometry( 0.2, 2 );
+        let M_PlierBase = new THREE.Mesh(G_PlierBase, MAT_blue_phong);
+        OBJ_Plier.add(M_PlierBase);
+
+        let OBJ_grabpoint = create_empty_group(.5);
+        OBJ_grabpoint.name = "attach_point";
+        OBJ_Plier.add(OBJ_grabpoint);
+        OBJ_grabpoint.position.z = .9;
+
+        //scene.add(OBJ_Plier);
+
+        //#endregion
+
+        //#region PlierAnimation
+        class PlierController
+        {
+            constructor(plier_obj)
+            {
+                this.plier_obj = plier_obj
+                this.LPlier = plier_obj.getObjectByName("PlierPartL");
+                this.RPlier = plier_obj.getObjectByName("PlierPartR");
+
+                this.clk = new THREE.Clock();
+                this.previous_state = 0;
+                this.moving_state = 0; // -1 -> closing; 0 -> Stopped; 1 opening
+                
+                this.min_angle = 0.0;
+                this.max_angle = 30 * Math.PI / 180;
+                this.velocity = .5;
+            }
+
+            update()
+            {
+                if (this.previous_state != this.moving_state) {
+                    this.clk.start();
+                    if (this.moving_state == 0) this.clk.stop();
+                }
+                this.previous_state = this.moving_state;
+
+                let angle = 0;
+                switch(this.moving_state)
+                {
+                    case -1:
+                        angle = this.RPlier.rotation.x - this.velocity * this.clk.getDelta();
+                        if (angle < this.min_angle)
+                        {
+                            angle = this.min_angle;
+                            this.moving_state = 0;
+                        }
+                        this.LPlier.rotation.x = - angle;
+                        this.RPlier.rotation.x = angle;
+                        break;
+                    // case 0:
+                    //     break;
+                    case 1:
+                        angle = this.RPlier.rotation.x + this.velocity * this.clk.getDelta();
+                        if (angle > this.max_angle)
+                        {
+                            angle = this.max_angle;
+                            this.moving_state = 0;
+                        }
+                        this.LPlier.rotation.x = - angle;
+                        this.RPlier.rotation.x = angle;
+                        break;
+                }
+            }
+
+            open()
+            {
+                this.moving_state = 1;
+            }
+            close()
+            {
+                this.moving_state = -1;
+            }
+            stop()
+            {
+                this.moving_state = 0;
+            }
+        }
+        //#endregion
+
+        //#region mounting robot
+        let Lshoulder = OBJ_arm_segment.clone();
+        let Lforearm = OBJ_arm_segment.clone();
+        let Lafterfor = OBJ_arm_segment.clone();
+        let Lplier = OBJ_Plier.clone();
+        //console.log(Lshoulder.getObjectByName("attach_point"));
+        Lshoulder.getObjectByName("attach_point").add(Lforearm);
+        Lforearm.getObjectByName("attach_point").add(Lafterfor);
+        Lafterfor.getObjectByName("attach_point").add(Lplier);
+        
+        // Lshoulder.getObjectByName("attach_point").rotation.x -= Math.PI/4;
+        //Lshoulder.rotation.z = Math.PI/2;
+        Lshoulder.rotation.y = Math.PI/3;
+        Lshoulder.rotation.x = -Math.PI/4;
+        Lshoulder.position.set(.5, .5, 0);
+        
+        OBJ_robot.add(Lshoulder);
+
+        let Rshoulder = OBJ_arm_segment.clone();
+        let Rforearm = OBJ_arm_segment.clone();
+        let Rafterfor = OBJ_arm_segment.clone();
+        let Rplier = OBJ_Plier.clone();
+        //console.log(Lshoulder.getObjectByName("attach_point"));
+        Rshoulder.getObjectByName("attach_point").add(Rforearm);
+        Rforearm.getObjectByName("attach_point").add(Rafterfor);
+        Rafterfor.getObjectByName("attach_point").add(Rplier);
+        
+        // Lshoulder.getObjectByName("attach_point").rotation.x -= Math.PI/4;
+        //Lshoulder.rotation.z = Math.PI/2;
+        Rshoulder.rotation.y = -Math.PI/3;
+        Rshoulder.rotation.x = -Math.PI/4;
+        Rshoulder.position.set(-.5, .5, 0);
+        
+        OBJ_robot.add(Rshoulder);
+        OBJ_robot.position.z = -3
+        scene.add(OBJ_robot);
+        camera.position.z = 5;
+
+        let controlsOrbit = new OrbitControls(camera, canvas);
+        controlsOrbit.target.set(0, 0, 0);
+        controlsOrbit.update();
+        //#endregion
+        
+        //#region IK setter
+        let joint_table_L = [
+            [Lshoulder, new THREE.Vector3(0,0,1)],
+            [Lshoulder.getObjectByName("revolut_joint"), new THREE.Vector3(0,1,0)],
+            [Lshoulder.getObjectByName("revolut_joint").getObjectByName("attach_point"), new THREE.Vector3(0,0,1)],
+            [Lforearm.getObjectByName("revolut_joint"), new THREE.Vector3(0,1,0)],
+            [Lforearm.getObjectByName("revolut_joint").getObjectByName("attach_point"), new THREE.Vector3(0,0,1)],
+            [Lafterfor.getObjectByName("revolut_joint"), new THREE.Vector3(0,1,0)],
+            [Lafterfor.getObjectByName("revolut_joint").getObjectByName("attach_point"), new THREE.Vector3(0,0,1)],
+        ];
+        let L_target = create_empty_group(.1);
+        //L_target.add(new THREE.Mesh(new THREE.BoxGeometry(.3, .3, .3), new THREE.MeshPhongMaterial( { color : 0xff0000 } )));
+        L_target.matrixAutoUpdate = true;
+        scene.add(L_target);
+
+        let ikleft = new IKSolver(
+            Lshoulder, 
+            L_target,
+
+            //Lshoulder.getObjectByName("attach_point"),
+            //Lforearm.getObjectByName("attach_point"), 
+            //Lafterfor.getObjectByName("attach_point"),
+            Lplier.getObjectByName("attach_point"),
+
+            joint_table_L);
+        
+        L_target.position.set(1.8,1.8,2.8 - 3);
+
+        let joint_table_R = [
+            [Rshoulder, new THREE.Vector3(0,0,1)],
+            [Rshoulder.getObjectByName("revolut_joint"), new THREE.Vector3(0,1,0)],
+            [Rshoulder.getObjectByName("revolut_joint").getObjectByName("attach_point"), new THREE.Vector3(0,0,1)],
+            [Rforearm.getObjectByName("revolut_joint"), new THREE.Vector3(0,1,0)],
+            [Rforearm.getObjectByName("revolut_joint").getObjectByName("attach_point"), new THREE.Vector3(0,0,1)],
+            [Rafterfor.getObjectByName("revolut_joint"), new THREE.Vector3(0,1,0)],
+            [Rafterfor.getObjectByName("revolut_joint").getObjectByName("attach_point"), new THREE.Vector3(0,0,1)],
+        ];
+        let R_target = create_empty_group(.1);
+        //R_target.add(new THREE.Mesh(new THREE.BoxGeometry(.3, .3, .3), new THREE.MeshPhongMaterial( { color : 0xff0000 } )));
+        R_target.matrixAutoUpdate = true;
+        scene.add(R_target);
+
+        let ikright = new IKSolver(
+            Rshoulder, 
+            R_target,
+
+            //Lshoulder.getObjectByName("attach_point"),
+            //Lforearm.getObjectByName("attach_point"), 
+            //Lafterfor.getObjectByName("attach_point"),
+            Rplier.getObjectByName("attach_point"),
+
+            joint_table_R);
+        
+        R_target.position.set(-1.8,1.8,2.8 - 3);
+        //#endregion
+
+        //#region Plier controller & UI
+        let LPC = new PlierController(Lplier);
+        let RPC = new PlierController(Rplier);
+        let arms_movement = true;
+
+        function toggleAxesHelpers(show) {
+            scene.traverse((object) => {
+                if (object instanceof THREE.AxesHelper) {
+                    object.visible = show;
+                }
+            });
+        }
+
+        let myguiobj = {
+            L_plier_open : () => {LPC.open()},
+            L_plier_close : () => {LPC.close()},
+            L_plier_stop : () => {LPC.stop()},
+            R_plier_open : () => {RPC.open()},
+            R_plier_close : () => {RPC.close()},
+            R_plier_stop : () => {RPC.stop()},
+            toggle_arms_movement : () => {arms_movement = !arms_movement},
+            display_axis : () => {SHOW_AXIS = !SHOW_AXIS; toggleAxesHelpers(SHOW_AXIS)}
+        };
+        let infodisplay = new GUI();
+        infodisplay.add(myguiobj, "L_plier_open");
+        infodisplay.add(myguiobj, "L_plier_close");
+        infodisplay.add(myguiobj, "L_plier_stop");
+        infodisplay.add(myguiobj, "R_plier_open");
+        infodisplay.add(myguiobj, "R_plier_close");
+        infodisplay.add(myguiobj, "R_plier_stop");
+        infodisplay.add(myguiobj, "toggle_arms_movement");
+        infodisplay.add(myguiobj, "display_axis");
+        //#endregion
+
+        let vel = 0.01;
+        let vel2 = 0.01;
+        let animstate = 1;
+
+        let close_to_targetL = false;
+        let endeffectorL = Lplier.getObjectByName("attach_point");
+        let close_to_targetR = false;
+        let endeffectorR = Rplier.getObjectByName("attach_point");
+
+        LPC.open();
+        RPC.open();
+
+        let plopendist = 0.5;
+
+        function render () {
+            scene.updateMatrixWorld();
+            resizeRendererToDisplaySize(renderer);
+
+            if(arms_movement)
+            {
+                ikleft.update();
+                ikright.update();
+            }
+            
+            let efLpos = new THREE.Vector3();
+            endeffectorL.getWorldPosition(efLpos);
+            if (!close_to_targetL && efLpos.distanceTo(L_target.position) < plopendist) {
+                close_to_targetL = true;
+                LPC.close();
+            }
+            else if (close_to_targetL && efLpos.distanceTo(L_target.position) > plopendist) {
+                close_to_targetL = false;
+                LPC.open();
+            }
+
+            let efRpos = new THREE.Vector3();
+            endeffectorR.getWorldPosition(efRpos);
+            if (!close_to_targetR && efRpos.distanceTo(R_target.position) < plopendist) {
+                close_to_targetR = true;
+                RPC.close();
+            }
+            else if (close_to_targetR && efRpos.distanceTo(R_target.position) > plopendist) {
+                close_to_targetR = false;
+                RPC.open();
+            }
+
+            LPC.update();
+            RPC.update();
+
+            //requestAnimationFrame(render);
+            controlsOrbit.update();
+
+            switch(animstate)
+            {
+                case 1:
+                    L_target.position.x += vel;
+                    R_target.position.x += vel;
+                    if (L_target.position.x > 2) animstate = 2;
+                    break;
+                case 2:
+                    L_target.position.y -= vel;
+                    R_target.position.y -= vel;
+                    if (L_target.position.y < -0.5) animstate = 3;
+                    break; 
+                case 3:
+                    L_target.position.x -= vel;
+                    R_target.position.x -= vel;
+                    if (L_target.position.x < .5) animstate = 4;
+                    break;
+                case 4:
+                    L_target.position.y += vel;
+                    R_target.position.y += vel;
+                    if (L_target.position.y > 1.5) animstate = 1;
+                    break; 
+            }
+
+            renderer.render(scene, camera);
+        };
+
+        //render();
+        renderer.setAnimationLoop(render);
+
+    </script>
+    </body>
+</html>
