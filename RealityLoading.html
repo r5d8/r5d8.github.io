@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pol Sturlese's Portfolio</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+        }
+
+        body {
+            background: black;
+            color: #00ffa2;
+            text-align: center;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            text-shadow: 0 0 10px #1bc989, 0 0 20px #1bc989;
+            animation: glow 1.5s infinite alternate;
+        }
+
+        p {
+            font-size: 1.2rem;
+            opacity: 0.8;
+            margin-top: 10px;
+        }
+
+        .vr-headset {
+            width: 150px;
+            animation: float 3s infinite ease-in-out;
+            filter: drop-shadow(0 0 15px #00ffa2);
+        }
+
+        @keyframes glow {
+            from { text-shadow: 0 0 10px #00ffa2, 0 0 20px #00ffa2; }
+            to { text-shadow: 0 0 15px #00ffa2, 0 0 30px #00ffa2; }
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .footer {
+            position: absolute;
+            bottom: 20px;
+            font-size: 0.9rem;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+    <img src="./resources/images/TempVRLogo.png" alt="VR Headset" class="vr-headset">
+    <h1>Building Reality... Please Come Back Again Tomorrow!</h1>
+    <p>We're still rendering your future experience. Check back soon!</p>
+    <div class="footer">Pol Sturlese Ruiz - 2025</div>
+</body>
+</html>

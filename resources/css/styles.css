@@ -1,0 +1,62 @@
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+    background-color: #222222;
+    color: #ffffff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+}
+
+h1 {
+    font-size: 2.5rem;
+    color: #00ffa2;
+    text-shadow: 0 0 10px #1bc989, 0 0 20px #1bc989;
+    animation: glow 1.5s infinite alternate;
+}
+
+.quote {
+    font-size: 1.2rem;
+    font-style: italic;
+    margin-bottom: 20px;
+}
+
+#three-logo {
+    width: 300px;
+    height: 300px;
+}
+
+nav {
+    margin-top: 20px;
+}
+
+nav a {
+    color: #00ffa2;
+    text-decoration: none;
+    margin: 0 15px;
+    font-size: 1rem;
+}
+
+nav a:hover {
+    text-decoration: underline;
+}
+
+@keyframes glow {
+    from { text-shadow: 0 0 10px #00ffa2, 0 0 20px #00ffa2; }
+    to { text-shadow: 0 0 15px #00ffa2, 0 0 30px #00ffa2; }
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+.footer {
+    position: absolute;
+    bottom: 20px;
+    font-size: 0.9rem;
+    opacity: 0.5;
+}

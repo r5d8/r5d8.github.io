@@ -3,67 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reality Loading...</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Arial', sans-serif;
-        }
-
-        body {
-            background: black;
-            color: #00ffa2;
-            text-align: center;
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        h1 {
-            font-size: 2.5rem;
-            text-shadow: 0 0 10px #1bc989, 0 0 20px #1bc989;
-            animation: glow 1.5s infinite alternate;
-        }
-
-        p {
-            font-size: 1.2rem;
-            opacity: 0.8;
-            margin-top: 10px;
-        }
-
-        .vr-headset {
-            width: 150px;
-            animation: float 3s infinite ease-in-out;
-            filter: drop-shadow(0 0 15px #00ffa2);
-        }
-
-        @keyframes glow {
-            from { text-shadow: 0 0 10px #00ffa2, 0 0 20px #00ffa2; }
-            to { text-shadow: 0 0 15px #00ffa2, 0 0 30px #00ffa2; }
-        }
-
-        @keyframes float {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
-        }
-
-        .footer {
-            position: absolute;
-            bottom: 20px;
-            font-size: 0.9rem;
-            opacity: 0.5;
-        }
-    </style>
+    <title>Pol Sturlese</title>
+    <link rel="stylesheet" href="resources/css/styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="resources/js/three-logo.js" defer></script>
 </head>
 <body>
-    <img src="./resources/images/TempVRLogo.png" alt="VR Headset" class="vr-headset">
-    <h1>Building Reality... Please Come Back Again Tomorrow!</h1>
-    <p>We're still rendering your future experience. Check back soon!</p>
-    <div class="footer">Pol Sturlese Ruiz - 2025</div>
+    <header>
+        <h1> <center>Welcome to My Portfolio</center></h1>
+        <blockquote><center> <em>"Shoot for the moon. Even if you miss, you'll land among the stars."</em> </br> ― Norman Vincent Peale </center></blockquote>
+    </header>
+    <main>
+        <section id="three-logo">
+            <h2>3D Logo Showcase</h2>
+            <div id="logo-container"></div>
+        </section>
+    </main>
+    <nav>
+        <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="about.html">About Me</a></li>
+            <li><a href="experience.html">Experience</a></li>
+            <li><a href="projects.html">Projects</a></li>
+            <li><a href="contact.html">Contact</a></li>
+        </ul>
+    </nav>
 </body>
 </html>
