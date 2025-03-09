@@ -33,7 +33,7 @@ h1 {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background-color: #0d0d0d;
+    background-color: #0d0d0d8a;
     padding: 15px 40px;
     position: relative;
   }
