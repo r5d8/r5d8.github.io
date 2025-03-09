@@ -15,7 +15,6 @@
     }
 
     header {
-        /* background: #111111; */
         padding: 1rem 0;
         text-align: center;
         color: #00ffa2;
@@ -36,99 +35,46 @@
       margin: 40px auto;
     }
 
-    /* Vertical line in center */
-    /*.timeline::after {
-      content: '';
-      position: absolute;
-      width: 6px;
-      background-color: #ddd;
-      top: 0;
-      bottom: 0;
-      left: 50%;
-      margin-left: -3px;
-    } */
-
-    /* Timeline block */
     .timeline-container {
-      padding: 20px 40px;
+      display: flex;
+      justify-content: flex-end;
+      padding: 20px 5px;
       position: relative;
-      width: 50%;
+      width: 100%;
       box-sizing: border-box;
-        float: center;
-        clear: both;
+      clear: both;
     }
 
-    /* Position left*/
-    /*
-    .timeline-container.left {
-      right: 9.7%;
-    }*/
-
-    /* Position right */
-    /*
-    .timeline-container.right {
-      left: 49.85%;
-    } */
-
-    /* Position left */
-    .timeline-container.left {
-    position: relative;
-    right: -1%;
-    text-align: right;
+    .timeline-container .year {
+      flex: 1;
+      padding: 20px;
+      text-align: right;
+      font-weight: bold;
+      color: #00b874;
+      margin-right: 50px;
     }
 
-    /* Position right */
-    .timeline-container.right {
-    position: relative;
-    left: 49.8%;
-    transform: translateX(0); /* stays in place, naturally right-aligned */
-    text-align: left;
+    .timeline-container .content {
+      flex: 1.1;
+      padding: 0px;
+      background-color: transparent;
+      border-radius: 6px;
+      position: relative;
+      text-align: left;
     }
 
-    /* Circles on timeline */
     .timeline-container::before {
       content: '';
       position: absolute;
       width: 20px;
       height: 20px;
-      background-color: rgba(255, 255, 255, 0);
       border: 4px solid #00b874;
-      top: 20px;
+      background-color: transparent;
+      top: 40px;
+      left: 50%;
+      transform: translateX(-50%);
       border-radius: 50%;
       z-index: 1;
-    }
-
-    .timeline-container.left::before {
-      right: -10px;
-    }
-
-    .timeline-container.right::before {
-      left: -10px;
-    }
-
-    /* Timeline content */
-    .timeline-container .content {
-      padding: 20px;
-      background-color: transparent;
-      /* border: 1px solid #ccc; */
-      border-radius: 6px;
-      position: relative;
-    }
-
-    /* Align content text */
-    .timeline-container.left .content {
-      text-align: right;
-    }
-
-    .timeline-container.right .content {
-      text-align: left;
-    }
-
-    /* Clear floats */
-    .timeline::before {
-      content: "";
-      display: table;
-      clear: both;
     }
 
     .timeline::after {
@@ -139,13 +85,7 @@
         top: 0;
         bottom: 0;
         left: 50%;
-        margin-left: 0px;
-    }
-    
-
-    /* Allow each block to stack */
-    .timeline-container {
-      clear: both;
+        transform: translateX(-50%);
     }
 
     footer {
@@ -175,17 +115,19 @@
     <section>
       <h2>Studies</h2>
       <div class="timeline">
-        <div class="timeline-container left">
+        <div class="timeline-container">
+          <div class="year">2015 - 2019</div>
           <div class="content">
             <h3>Degree 1</h3>
-            <p>Institution Name (2015 - 2019)</p>
+            <p>Institution Name</p>
             <p>Bachelor’s Degree in Computer Science. Graduated with honors.</p>
           </div>
         </div>
-        <div class="timeline-container right">
+        <div class="timeline-container">
+          <div class="year">2020 - 2022</div>
           <div class="content">
             <h3>Degree 2</h3>
-            <p>Institution Name (2020 - 2022)</p>
+            <p>Institution Name</p>
             <p>Master’s Degree in Artificial Intelligence.</p>
           </div>
         </div>
@@ -196,16 +138,18 @@
       <h2>Work Experience</h2>
       <div class="timeline">
         <div class="timeline-container left">
+          <div class="year">2019 - 2021</div>
           <div class="content">
             <h3>Software Engineer</h3>
-            <p>Tech Company A (2019 - 2021)</p>
+            <p>Tech Company A</p>
             <p>Worked on backend systems, APIs, and data pipelines.</p>
           </div>
         </div>
         <div class="timeline-container right">
+          <div class="year">2022 - Present</div>
           <div class="content">
             <h3>Senior Developer</h3>
-            <p>Tech Company B (2022 - Present)</p>
+            <p>Tech Company B</p>
             <p>Leading a team developing scalable AI applications.</p>
           </div>
         </div>
