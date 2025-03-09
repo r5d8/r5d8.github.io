@@ -1,36 +1,229 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Experience</title>
-    <link rel="stylesheet" href="resources/css/styles.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Professional Information</title>
+  <style>
+    body {
+        font-family: Arial, sans-serif;
+        line-height: 1.6;
+        margin: 0;
+        padding: 0;
+        background-color: #222222;
+        color: #ffffff;
+    }
+
+    header {
+        /* background: #111111; */
+        padding: 1rem 0;
+        text-align: center;
+        color: #00ffa2;
+        text-shadow: 0 0 5px #1bc989, 0 0 10px #1bc989;
+        animation: glow 1.5s infinite alternate;
+    }
+
+    h2 {
+      text-align: center;
+      color: #00b874;
+      margin-top: 40px;
+    }
+
+    /* === Timeline Layout === */
+    .timeline {
+      position: relative;
+      max-width: 1000px;
+      margin: 40px auto;
+    }
+
+    /* Vertical line in center */
+    /*.timeline::after {
+      content: '';
+      position: absolute;
+      width: 6px;
+      background-color: #ddd;
+      top: 0;
+      bottom: 0;
+      left: 50%;
+      margin-left: -3px;
+    } */
+
+    /* Timeline block */
+    .timeline-container {
+      padding: 20px 40px;
+      position: relative;
+      width: 50%;
+      box-sizing: border-box;
+        float: center;
+        clear: both;
+    }
+
+    /* Position left*/
+    /*
+    .timeline-container.left {
+      right: 9.7%;
+    }*/
+
+    /* Position right */
+    /*
+    .timeline-container.right {
+      left: 49.85%;
+    } */
+
+    /* Position left */
+    .timeline-container.left {
+    position: relative;
+    right: -1%;
+    text-align: right;
+    }
+
+    /* Position right */
+    .timeline-container.right {
+    position: relative;
+    left: 49.8%;
+    transform: translateX(0); /* stays in place, naturally right-aligned */
+    text-align: left;
+    }
+
+    /* Circles on timeline */
+    .timeline-container::before {
+      content: '';
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      background-color: rgba(255, 255, 255, 0);
+      border: 4px solid #00b874;
+      top: 20px;
+      border-radius: 50%;
+      z-index: 1;
+    }
+
+    .timeline-container.left::before {
+      right: -10px;
+    }
+
+    .timeline-container.right::before {
+      left: -10px;
+    }
+
+    /* Timeline content */
+    .timeline-container .content {
+      padding: 20px;
+      background-color: transparent;
+      /* border: 1px solid #ccc; */
+      border-radius: 6px;
+      position: relative;
+    }
+
+    /* Align content text */
+    .timeline-container.left .content {
+      text-align: right;
+    }
+
+    .timeline-container.right .content {
+      text-align: left;
+    }
+
+    /* Clear floats */
+    .timeline::before {
+      content: "";
+      display: table;
+      clear: both;
+    }
+
+    .timeline::after {
+        content: '';
+        position: absolute;
+        width: 6px;
+        background-color: #00b874;
+        top: 0;
+        bottom: 0;
+        left: 50%;
+        margin-left: 0px;
+    }
+    
+
+    /* Allow each block to stack */
+    .timeline-container {
+      clear: both;
+    }
+
+    footer {
+      text-align: center;
+      padding: 20px;
+      background-color: #f0f0f0;
+    }
+
+    ul {
+      max-width: 800px;
+      margin: 0 auto 40px;
+      padding: 0 20px;
+      list-style-type: none;
+    }
+
+    ul li {
+      margin: 10px 0;
+    }
+  </style>
 </head>
 <body>
-    <header>
-        <h1>Experience</h1>
-    </header>
-    <main>
-        <section>
-            <h2>Work Experience</h2>
-            <ul>
-                <li><strong>Job Title 1</strong> - Company Name (Year - Year)</li>
-                <li><strong>Job Title 2</strong> - Company Name (Year - Year)</li>
-                <li><strong>Job Title 3</strong> - Company Name (Year - Year)</li>
-            </ul>
-        </section>
-        <section>
-            <h2>Skills</h2>
-            <ul>
-                <li>Skill 1</li>
-                <li>Skill 2</li>
-                <li>Skill 3</li>
-                <li>Skill 4</li>
-            </ul>
-        </section>
-    </main>
-    <footer>
-        <p>&copy; 2025 Pol Sturlese Ruiz</p>
-    </footer>
+  <header>
+    <h1>Professional Information</h1>
+  </header>
+
+  <main>
+    <section>
+      <h2>Studies</h2>
+      <div class="timeline">
+        <div class="timeline-container left">
+          <div class="content">
+            <h3>Degree 1</h3>
+            <p>Institution Name (2015 - 2019)</p>
+            <p>Bachelor’s Degree in Computer Science. Graduated with honors.</p>
+          </div>
+        </div>
+        <div class="timeline-container right">
+          <div class="content">
+            <h3>Degree 2</h3>
+            <p>Institution Name (2020 - 2022)</p>
+            <p>Master’s Degree in Artificial Intelligence.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Work Experience</h2>
+      <div class="timeline">
+        <div class="timeline-container left">
+          <div class="content">
+            <h3>Software Engineer</h3>
+            <p>Tech Company A (2019 - 2021)</p>
+            <p>Worked on backend systems, APIs, and data pipelines.</p>
+          </div>
+        </div>
+        <div class="timeline-container right">
+          <div class="content">
+            <h3>Senior Developer</h3>
+            <p>Tech Company B (2022 - Present)</p>
+            <p>Leading a team developing scalable AI applications.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Honors and Awards</h2>
+      <ul>
+        <li><strong>Award 1</strong> - Dean’s List, Top 5% of the class (2018)</li>
+        <li><strong>Award 2</strong> - Employee of the Year, Tech Company A (2020)</li>
+        <li><strong>Award 3</strong> - AI Innovation Challenge Winner (2023)</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer>
+    <p>&copy; 2025 Pol Sturlese Ruiz</p>
+  </footer>
 </body>
 </html>
